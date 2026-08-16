@@ -1,0 +1,5 @@
+__pycache__/
+*.pyc
+output/
+backup/
+source_checksums.json
