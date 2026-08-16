@@ -14,7 +14,7 @@ An interactive map tool for tracking house locations, decay status, and IDOC cou
 
 That's it — no Python, no dependencies, no setup.
 
-Your pins are saved to `pins.json` in the same folder as the exe and persist between sessions.
+`pins.json` is created automatically in the same folder as the exe the first time you save a pin. The map data is bundled inside the exe — no other files are needed.
 
 ---
 
