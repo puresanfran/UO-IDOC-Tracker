@@ -1,75 +1,91 @@
-# UO Second Age — Housing Placement Analyzer
+# Britannia House Tracker
 
-Reads your Ultima Online Second Age client files (read-only)
-and produces an interactive map showing every valid house placement spot.
+An interactive map tool for tracking house locations, decay status, and IDOC countdowns on the Britannia map.
 
-## Setup
+![Britannia House Tracker](https://img.shields.io/badge/platform-Windows-blue) ![Python](https://img.shields.io/badge/built%20with-PyQt6-purple)
 
-1. Copy this folder to `E:\Ultima House Mapping\`
-2. Install Python 3.10+ from https://python.org
-3. Double-click `run.bat` — it handles everything else
+---
 
-OR run manually in PowerShell:
+## Quick Start (No Install Required)
 
-```powershell
-pip install numpy Pillow
+1. Download the latest release
+2. Unzip the folder anywhere on your PC
+3. Double-click **`BritanniaHouseTracker.exe`**
 
-# Analyze small houses (fastest — ~5 min)
-python 1_analyze.py --house small
+That's it — no Python, no dependencies, no setup.
 
-# Analyze all sizes (~30 min, saves each as you go)
-python 1_analyze.py --all
+Your pins are saved to `pins.json` in the same folder as the exe and persist between sessions.
 
-# Re-run house analysis without re-reading map files (much faster)
-python 1_analyze.py --house keep --skip-map
+---
 
-# Open interactive viewer
-python 2_viewer.py
-```
-
-## Output files (in E:\Ultima House Mapping\output\)
-
-| File | Description |
-|------|-------------|
-| `britannia_base.png` | Rendered full map (1792×1024 at 4x scale) |
-| `terrain_blocked.npy` | Boolean: impassable tiles |
-| `terrain_altitude.npy` | Raw altitude values |
-| `terrain_flatness.npy` | Altitude variation per tile |
-| `guard_zones.npy` | Boolean: guard zone tiles |
-| `terrain_tileids.npy` | Raw tile IDs |
-| `valid_small.npy` | Valid NW corners for 7×7 house |
-| `valid_medium.npy` | Valid NW corners for 14×14 house |
-| `valid_large.npy` | Valid NW corners for 14×14 large |
-| `valid_tower.npy` | Valid NW corners for 16×14 tower |
-| `valid_keep.npy` | Valid NW corners for 24×24 keep |
-| `valid_castle.npy` | Valid NW corners for 31×31 castle |
-| `housing_*.png` | Overlay map images (one per house size) |
-
-## Viewer controls
+## Controls
 
 | Input | Action |
 |-------|--------|
-| Left drag | Pan map |
-| Scroll wheel | Zoom in/out |
-| Left click | Show tile info (coords, altitude, guard zone, valid houses) |
-| Right click | Copy tile coordinates to clipboard |
-| S key | Save current view as PNG |
-| R key | Reset to full map view |
-| Sidebar checkboxes | Toggle overlays |
-| Town dropdown | Jump to any town |
-| Coord box | Jump to specific tile x,y |
+| Left-drag | Pan the map |
+| Scroll wheel | Zoom in / out |
+| Right-click map | Drop a new pin |
+| Left-click pin | Select pin |
+| Right-click pin | Edit or delete pin |
+| R | Reset view |
+| Delete | Delete selected pin |
+| Ctrl+F | Focus pin search |
 
-## House placement rules applied
+---
 
-- No guard zones (towns, dungeon entrances)
-- No impassable tiles (mountains, water, large trees, rocks, walls)
-- Terrain must be flat within footprint (altitude variation ≤ 2)
-- 5-tile clearance north and south
-- 1-tile clearance east and west
+## Tracking Houses
 
-## Notes
+Right-click anywhere on the map to drop a pin. Each pin records:
 
-- Analysis reads from `E:\Ultima Online` but never writes to it
-- First run takes 5–30 min depending on house sizes selected
-- Subsequent runs with `--skip-map` are much faster (reuses saved .npy files)
-- The `.npy` files are large (map arrays) — keep them, they save time
+- **Label** — a nickname for the house
+- **House type** — size/style
+- **Decay status** — current stage
+- **Notes** — anything extra
+
+The app uses UO's real decay timing:
+
+| Stage | Duration |
+|-------|----------|
+| Brand New | 67h 12m |
+| Slightly Worn | 67h 12m |
+| Somewhat Worn | 67h 12m |
+| Fairly Worn | 67h 12m |
+| Greatly Worn | 67h 12m |
+| In Danger of Collapsing | 24h |
+
+Countdowns run in real time and survive app restarts. The **Decay Timers** panel in the sidebar shows all tracked houses sorted by urgency.
+
+---
+
+## Running from Source
+
+Requires Python 3.10+ and the following packages:
+
+```
+pip install PyQt6 Pillow
+```
+
+Then:
+
+```
+python tracker.py
+```
+
+Source also expects the UOAM map files at `E:\UOAM\` (MAP0-1/2/4/8.BMP and the .MAP landmark files). The standalone exe has these bundled in.
+
+---
+
+## Building the Exe
+
+```
+pip install pyinstaller
+python -m PyInstaller --onefile --windowed --name "BritanniaHouseTracker" \
+  --add-data "E:\UOAM\MAP0-1.BMP;uoam" \
+  --add-data "E:\UOAM\MAP0-2.BMP;uoam" \
+  --add-data "E:\UOAM\MAP0-4.BMP;uoam" \
+  --add-data "E:\UOAM\MAP0-8.BMP;uoam" \
+  --add-data "E:\UOAM\Common.MAP;uoam" \
+  --add-data "E:\UOAM\Atlas.MAP;uoam" \
+  --add-data "E:\UOAM\Dungeons.MAP;uoam" \
+  tracker.py
+```

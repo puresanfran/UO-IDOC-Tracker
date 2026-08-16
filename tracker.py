@@ -32,11 +32,18 @@ from PyQt6.QtCore import (
 from PIL import Image
 
 # ---------------------------------------------------------------------------
-# Paths
+# Paths — works both in dev and as a PyInstaller bundle
 # ---------------------------------------------------------------------------
-UOAM_PATH   = r"E:\UOAM"
-PINS_FILE   = r"E:\Ultima House Mapping\pins.json"
-OUTPUT_PATH = r"E:\Ultima House Mapping\output"
+if getattr(sys, "frozen", False):
+    # Running as .exe — BMPs/MAPs are bundled in _MEIPASS, pins.json sits next to the exe
+    _BUNDLE   = sys._MEIPASS
+    UOAM_PATH = os.path.join(_BUNDLE, "uoam")
+    PINS_FILE = os.path.join(os.path.dirname(sys.executable), "pins.json")
+else:
+    UOAM_PATH = r"E:\UOAM"
+    PINS_FILE = r"E:\Ultima House Mapping\pins.json"
+
+OUTPUT_PATH = os.path.join(os.path.dirname(PINS_FILE), "output")
 
 UOAM_BMPS = {
     1: os.path.join(UOAM_PATH, "MAP0-1.BMP"),
