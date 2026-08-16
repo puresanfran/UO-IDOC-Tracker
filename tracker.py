@@ -45,7 +45,7 @@ UOAM_BMPS = {
     8: os.path.join(UOAM_PATH, "MAP0-8.BMP"),
 }
 
-MAP_W = 7168
+MAP_W = 5000   # clipped — right half is Trammel/dead space, no houses placeable
 MAP_H = 4096
 
 # ---------------------------------------------------------------------------
@@ -57,12 +57,12 @@ HOUSE_TYPES = [
 ]
 
 DECAY_STAGES = [
-    "Fresh", "Slightly Worn", "Somewhat Worn",
+    "Brand New", "Slightly Worn", "Somewhat Worn",
     "Fairly Worn", "Greatly Worn", "In Danger of Collapsing",
 ]
 
 DECAY_COLORS = {
-    "Fresh":                   ("#22cc44", "#000000"),
+    "Brand New":               ("#22cc44", "#000000"),
     "Slightly Worn":           ("#aadd22", "#000000"),
     "Somewhat Worn":           ("#ffdd00", "#000000"),
     "Fairly Worn":             ("#ff8800", "#ffffff"),
@@ -70,139 +70,195 @@ DECAY_COLORS = {
     "In Danger of Collapsing": ("#cc0000", "#ffffff"),
 }
 
-IDOC_WINDOW = 86400   # 24 hours in seconds
+STAGE_DURATION = {
+    "Brand New":               67 * 3600 + 12 * 60,   # 242 640 s
+    "Slightly Worn":           67 * 3600 + 12 * 60,
+    "Somewhat Worn":           67 * 3600 + 12 * 60,
+    "Fairly Worn":             67 * 3600 + 12 * 60,
+    "Greatly Worn":            67 * 3600 + 12 * 60,
+    "In Danger of Collapsing": 24 * 3600,              # 86 400 s
+}
+
+NEXT_STAGE = {
+    "Brand New":               "Slightly Worn",
+    "Slightly Worn":           "Somewhat Worn",
+    "Somewhat Worn":           "Fairly Worn",
+    "Fairly Worn":             "Greatly Worn",
+    "Greatly Worn":            "In Danger of Collapsing",
+    "In Danger of Collapsing": None,
+}
 
 # ---------------------------------------------------------------------------
 # Stylesheet
 # ---------------------------------------------------------------------------
-GOLD    = "#c9a84c"
-GOLD_LT = "#e8c96a"
-PANEL   = "#12141a"
-PANEL2  = "#1a1d26"
-PANEL3  = "#20243000"
-BORDER  = "#2c3040"
-TEXT    = "#d4c89a"
-TEXT_DIM= "#7a7060"
-ACCENT  = "#8b4513"   # saddle-brown for hover states
+GOLD     = "#9b59f5"
+GOLD_LT  = "#b87fff"
+GOLD_DIM = "#6b3ab8"
+BG       = "#141416"
+SIDEBAR  = "#1c1c1e"
+CARD     = "#242428"
+BORDER   = "rgba(255, 255, 255, 20)"
+TEXT     = "#e2e2e6"
+TEXT_DIM = "#4a4a52"
+TEXT_MID = "#8a8a96"
+BLUE     = "#763cee"
+BLUE_LT  = "#9b59f5"
+RED      = "#f70d37"
+ORANGE   = "#9b59f5"
+GREEN    = "#18e614"
+PURPLE   = "#9b59f5"
 
 QSS = f"""
 * {{
-    font-family: "Segoe UI", "Georgia", serif;
+    font-family: "Segoe UI", sans-serif;
     font-size: 13px;
     color: {TEXT};
+    outline: 0;
 }}
-QMainWindow, QWidget {{
-    background: {PANEL};
-}}
+QMainWindow, QWidget {{ background: {BG}; }}
 QSplitter::handle {{ background: {BORDER}; width: 1px; }}
 
-/* ---- Scroll area / sidebar ---- */
-QScrollArea {{ border: none; background: {PANEL2}; }}
+/* Scrollbar */
+QScrollArea {{ border: none; background: transparent; }}
 QScrollBar:vertical {{
-    background: {PANEL2}; width: 5px; border: none; margin: 0;
+    background: transparent; width: 3px; border: none; margin: 0;
 }}
 QScrollBar::handle:vertical {{
-    background: #3a3520; border-radius: 2px; min-height: 24px;
+    background: rgba(255,255,255,32); border-radius: 2px; min-height: 30px;
 }}
+QScrollBar::handle:vertical:hover {{ background: rgba(255,255,255,56); }}
 QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{ height: 0; }}
 
-/* ---- Accordion headers ---- */
+/* Accordion */
 QToolButton#accordion {{
-    background: {PANEL2};
-    color: {GOLD};
+    background: transparent;
+    color: {TEXT_DIM};
     border: none;
     border-bottom: 1px solid {BORDER};
-    border-top: 1px solid {BORDER};
     text-align: left;
-    padding: 9px 12px;
-    font-weight: 700;
+    padding: 10px 16px;
     font-size: 10px;
-    letter-spacing: 1.5px;
+    font-weight: 600;
+    letter-spacing: 2px;
 }}
-QToolButton#accordion:hover {{ background: #1e2130; color: {GOLD_LT}; }}
+QToolButton#accordion:hover {{ color: {TEXT_MID}; background: rgba(255,255,255,6); }}
+QToolButton#accordion:checked {{ color: {TEXT}; }}
+QFrame#section {{ background: transparent; border: none; }}
 
-QFrame#section {{ background: {PANEL2}; border: none; }}
-
-/* ---- Inputs ---- */
-QLineEdit, QComboBox, QTextEdit {{
-    background: #0e1018;
+/* Inputs */
+QLineEdit, QTextEdit {{
+    background: {BG};
     border: 1px solid {BORDER};
-    border-radius: 4px;
-    padding: 5px 8px;
+    border-radius: 7px;
+    padding: 7px 11px;
     color: {TEXT};
-    selection-background-color: #3a2e10;
+    selection-background-color: rgba(155, 89, 245, 48);
 }}
-QLineEdit:focus, QComboBox:focus, QTextEdit:focus {{
+QLineEdit:focus, QTextEdit:focus {{
     border-color: {GOLD};
 }}
+QComboBox {{
+    background: {BG};
+    border: 1px solid {BORDER};
+    border-radius: 7px;
+    padding: 7px 11px;
+    color: {TEXT};
+}}
+QComboBox:focus {{ border-color: {GOLD}; }}
 QComboBox::drop-down {{ border: none; width: 18px; }}
 QComboBox::down-arrow {{ image: none; }}
 QComboBox QAbstractItemView {{
-    background: #0e1018; border: 1px solid {BORDER};
-    selection-background-color: #3a2e10;
+    background: {CARD};
+    border: 1px solid {BORDER};
+    border-radius: 7px;
+    selection-background-color: rgba(155, 89, 245, 40);
     color: {TEXT};
+    padding: 3px;
 }}
 
-/* ---- Buttons ---- */
+/* Buttons */
 QPushButton {{
-    background: {PANEL2};
+    background: rgba(255,255,255,12);
     border: 1px solid {BORDER};
-    border-radius: 4px;
-    padding: 6px 14px;
-    color: {TEXT};
+    border-radius: 7px;
+    padding: 7px 16px;
+    color: {TEXT_MID};
 }}
-QPushButton:hover  {{ background: #1e2130; border-color: {GOLD}; color: {GOLD_LT}; }}
-QPushButton:pressed {{ background: #0e1018; }}
+QPushButton:hover {{ background: rgba(255,255,255,24); color: {TEXT}; border-color: rgba(255,255,255,40); }}
+QPushButton:pressed {{ background: rgba(255,255,255,6); }}
 QPushButton#primary {{
-    background: #2a1e06;
-    border: 1px solid {GOLD};
-    color: {GOLD_LT};
+    background: {BLUE};
+    border: 1px solid {BLUE_LT};
+    border-radius: 7px;
+    color: #ffffff;
     font-weight: 600;
+    padding: 7px 18px;
 }}
-QPushButton#primary:hover {{ background: #3a2a08; border-color: {GOLD_LT}; }}
+QPushButton#primary:hover {{ background: {BLUE_LT}; border-color: {BLUE_LT}; }}
+QPushButton#primary:pressed {{ background: #0a0880; }}
 
-/* ---- Lists ---- */
+/* List */
 QListWidget {{
-    background: #0e1018;
+    background: {BG};
     border: 1px solid {BORDER};
-    border-radius: 4px;
+    border-radius: 8px;
     outline: none;
-    color: {TEXT};
+    padding: 3px;
 }}
-QListWidget::item {{ padding: 5px 8px; border-radius: 3px; }}
-QListWidget::item:selected {{ background: #3a2e10; color: {GOLD_LT}; }}
-QListWidget::item:hover:!selected {{ background: #181c28; }}
+QListWidget::item {{
+    padding: 5px 9px;
+    border-radius: 5px;
+    color: {TEXT_MID};
+}}
+QListWidget::item:selected {{ background: rgba(155,89,245,32); color: {GOLD_LT}; }}
+QListWidget::item:hover:!selected {{ background: rgba(255,255,255,10); color: {TEXT}; }}
 
-/* ---- Status bar ---- */
+/* Status bar */
 QStatusBar {{
     background: #0a0c10;
     color: {TEXT_DIM};
     font-size: 11px;
     border-top: 1px solid {BORDER};
+    padding: 0 6px;
+}}
+QStatusBar QPushButton {{
+    padding: 3px 10px;
+    font-size: 11px;
+    border-radius: 5px;
+    margin: 2px 0;
 }}
 
-/* ---- Context / dropdown menus ---- */
+/* Menus */
 QMenu {{
-    background: #0e1018;
+    background: {CARD};
     border: 1px solid {BORDER};
-    border-radius: 6px;
-    padding: 4px;
+    border-radius: 9px;
+    padding: 5px;
     color: {TEXT};
 }}
-QMenu::item {{ padding: 6px 20px 6px 12px; border-radius: 3px; }}
-QMenu::item:selected {{ background: #3a2e10; color: {GOLD_LT}; }}
-QMenu::separator {{ height: 1px; background: {BORDER}; margin: 3px 8px; }}
+QMenu::item {{ padding: 7px 20px 7px 12px; border-radius: 5px; color: {TEXT_MID}; }}
+QMenu::item:selected {{ background: rgba(155,89,245,34); color: {TEXT}; }}
+QMenu::separator {{ height: 1px; background: {BORDER}; margin: 4px 8px; }}
 
-/* ---- Dialog ---- */
-QDialog {{ background: {PANEL2}; }}
+/* Dialog */
+QDialog {{ background: {SIDEBAR}; }}
 QLabel {{ color: {TEXT}; }}
-QDialogButtonBox QPushButton {{ min-width: 80px; }}
+QDialogButtonBox QPushButton {{ min-width: 88px; }}
 
-/* ---- Named labels ---- */
-QLabel#idoc_name  {{ color: {TEXT};   font-weight: 700; font-size: 12px; }}
-QLabel#idoc_timer {{ color: #e06030; font-family: "Consolas", monospace; font-size: 12px; }}
-QLabel#idoc_empty {{ color: {TEXT_DIM}; font-size: 12px; font-style: italic; }}
-QLabel#pin_info   {{ color: {GOLD};   font-family: "Consolas", monospace; font-size: 11px; }}
+/* Checkbox */
+QCheckBox {{ color: {TEXT_MID}; spacing: 8px; }}
+QCheckBox::indicator {{
+    width: 15px; height: 15px; border-radius: 4px;
+    border: 1px solid {BORDER}; background: {BG};
+}}
+QCheckBox::indicator:checked {{ background: {BLUE}; border-color: {GOLD}; }}
+QCheckBox:hover {{ color: {TEXT}; }}
+
+/* Named labels */
+QLabel#idoc_name  {{ color: {TEXT}; font-weight: 600; font-size: 13px; }}
+QLabel#idoc_timer {{ color: {RED}; font-family: Consolas; font-size: 12px; font-weight: 600; }}
+QLabel#idoc_empty {{ color: {TEXT_DIM}; font-size: 12px; font-style: italic; padding: 4px 0; }}
+QLabel#pin_info   {{ color: {TEXT_MID}; font-family: Consolas; font-size: 11px; }}
 """
 
 # ---------------------------------------------------------------------------
@@ -291,52 +347,65 @@ class Accordion(QWidget):
 class PinDialog(QDialog):
     def __init__(self, parent, x, y, pin=None):
         super().__init__(parent)
-        self.setWindowTitle("Edit Pin" if pin else "Drop Pin")
+        self.setWindowTitle("Edit Pin" if pin else "New Pin")
         self.setModal(True)
-        self.setMinimumWidth(380)
+        self.setMinimumWidth(400)
         self.result_pin = None
         self._pin = pin
         self._x, self._y = x, y
 
         lay = QVBoxLayout(self)
-        lay.setSpacing(10)
-        lay.setContentsMargins(20, 16, 20, 16)
+        lay.setSpacing(12)
+        lay.setContentsMargins(24, 20, 24, 20)
 
-        coord_lbl = QLabel(f"Location:  x = {x},  y = {y}")
-        coord_lbl.setStyleSheet("color: #555; font-size: 11px;")
+        # Header
+        title = QLabel("Edit Pin" if pin else "Drop Pin")
+        title.setStyleSheet(
+            f"color: {GOLD}; font-size: 15px; font-weight: 700; letter-spacing: 1px;")
+        lay.addWidget(title)
+
+        coord_lbl = QLabel(f"x = {x}   y = {y}")
+        coord_lbl.setStyleSheet(
+            f"color: {TEXT_DIM}; font-size: 11px; font-family: Consolas;")
         lay.addWidget(coord_lbl)
 
-        def field(label, widget):
-            row = QHBoxLayout()
-            lbl = QLabel(label)
-            lbl.setFixedWidth(90)
-            lbl.setStyleSheet("color: #888;")
-            row.addWidget(lbl)
-            row.addWidget(widget)
-            lay.addLayout(row)
+        sep = QFrame()
+        sep.setFrameShape(QFrame.Shape.HLine)
+        sep.setStyleSheet(f"color: {BORDER};")
+        lay.addWidget(sep)
+
+        def field(label_text, widget):
+            col = QVBoxLayout()
+            col.setSpacing(4)
+            lbl = QLabel(label_text.upper())
+            lbl.setStyleSheet(
+                f"color: {TEXT_DIM}; font-size: 10px; font-weight: 600; letter-spacing: 1.5px;")
+            col.addWidget(lbl)
+            col.addWidget(widget)
+            lay.addLayout(col)
             return widget
 
         self.label_edit = field("Label", QLineEdit(pin["label"] if pin else ""))
+        self.label_edit.setPlaceholderText("House nickname…")
 
         self.type_combo = QComboBox()
         self.type_combo.addItems(HOUSE_TYPES)
         self.type_combo.setCurrentText(pin["house_type"] if pin else HOUSE_TYPES[0])
-        field("House type", self.type_combo)
+        field("House Type", self.type_combo)
 
         self.decay_combo = QComboBox()
         self.decay_combo.addItems(DECAY_STAGES)
         self.decay_combo.setCurrentText(pin["decay"] if pin else DECAY_STAGES[0])
-        field("Decay", self.decay_combo)
+        field("Decay Status", self.decay_combo)
 
-        notes_lbl = QLabel("Notes")
-        notes_lbl.setStyleSheet("color: #888;")
-        lay.addWidget(notes_lbl)
         self.notes_edit = QTextEdit()
-        self.notes_edit.setFixedHeight(80)
+        self.notes_edit.setFixedHeight(72)
+        self.notes_edit.setPlaceholderText("Notes…")
         if pin:
             self.notes_edit.setPlainText(pin.get("notes", ""))
-        lay.addWidget(self.notes_edit)
+        field("Notes", self.notes_edit)
 
+        lay.addSpacing(4)
         btns = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Save |
             QDialogButtonBox.StandardButton.Cancel)
@@ -348,25 +417,21 @@ class PinDialog(QDialog):
         self.label_edit.setFocus()
 
     def _save(self):
-        decay = self.decay_combo.currentText()
-        old_decay    = self._pin["decay"]    if self._pin else None
-        old_idoc_set = self._pin.get("idoc_set_at") if self._pin else None
-        if decay == "In Danger of Collapsing":
-            idoc_set_at = (old_idoc_set
-                           if (old_decay == decay and old_idoc_set)
-                           else time.time())
-        else:
-            idoc_set_at = None
+        decay     = self.decay_combo.currentText()
+        old_decay = self._pin["decay"] if self._pin else None
+        old_set   = self._pin.get("decay_set_at") or self._pin.get("idoc_set_at") if self._pin else None
+        # Preserve timestamp if the stage didn't change, otherwise start fresh
+        decay_set_at = old_set if (old_decay == decay and old_set) else time.time()
 
         self.result_pin = {
-            "id":          self._pin["id"] if self._pin else int(time.time() * 1000),
-            "x":           self._x,
-            "y":           self._y,
-            "label":       self.label_edit.text().strip(),
-            "house_type":  self.type_combo.currentText(),
-            "decay":       decay,
-            "notes":       self.notes_edit.toPlainText().strip(),
-            "idoc_set_at": idoc_set_at,
+            "id":           self._pin["id"] if self._pin else int(time.time() * 1000),
+            "x":            self._x,
+            "y":            self._y,
+            "label":        self.label_edit.text().strip(),
+            "house_type":   self.type_combo.currentText(),
+            "decay":        decay,
+            "notes":        self.notes_edit.toPlainText().strip(),
+            "decay_set_at": decay_set_at,
         }
         self.accept()
 
@@ -390,7 +455,7 @@ class MapCanvas(QGraphicsView):
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform, False)
-        self.setBackgroundBrush(QBrush(QColor("#080a10")))
+        self.setBackgroundBrush(QBrush(QColor("#141416")))
         self.setCursor(QCursor(Qt.CursorShape.CrossCursor))
 
         # Map tiles {scale: QPixmap}
@@ -620,6 +685,10 @@ class MapCanvas(QGraphicsView):
     def resizeEvent(self, ev):
         super().resizeEvent(ev)
         self._render()
+        # Let MainWindow reposition any floating overlays
+        mw = self.window()
+        if hasattr(mw, "_reposition_legend"):
+            mw._reposition_legend()
 
     # ----------------------------------------------------------------
     # Pin helpers
@@ -722,49 +791,112 @@ class _PinOverlayItem(QGraphicsItem):
                 painter.setBrush(QBrush(QColor(0, 0, 0, 160)))
                 painter.drawRoundedRect(lx - 2, ly - fm.ascent() - 1,
                                         tw + 6, fm.height() + 2, 3, 3)
-                painter.setPen(QPen(text_col))
+                painter.setPen(QPen(QColor(255, 255, 255)))
                 painter.drawText(lx + 1, ly, label)
 
 
 # ---------------------------------------------------------------------------
 # Sidebar widgets
 # ---------------------------------------------------------------------------
-class IdocRow(QWidget):
-    clicked = pyqtSignal(object)   # emits pin dict
+class DecayRow(QWidget):
+    clicked = pyqtSignal(object)
 
     def __init__(self, pin: dict, parent=None):
         super().__init__(parent)
         self._pin = pin
         self.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+
         lay = QVBoxLayout(self)
-        lay.setContentsMargins(10, 6, 10, 6)
-        lay.setSpacing(2)
+        lay.setContentsMargins(12, 10, 12, 10)
+        lay.setSpacing(4)
 
+        # Top row: label + coords
+        top = QHBoxLayout()
+        top.setSpacing(6)
         label = pin.get("label") or pin["house_type"].split()[0]
-        name_lbl = QLabel(f"{label}  ({pin['x']}, {pin['y']})",
-                          objectName="idoc_name")
-        lay.addWidget(name_lbl)
+        name_lbl = QLabel(label, objectName="idoc_name")
+        top.addWidget(name_lbl)
+        top.addStretch()
+        coord_lbl = QLabel(f"{pin['x']}, {pin['y']}")
+        coord_lbl.setStyleSheet(f"color: {TEXT_DIM}; font-size: 11px; font-family: Consolas;")
+        top.addWidget(coord_lbl)
+        lay.addLayout(top)
 
+        # Stage badge
+        fill_hex, _ = DECAY_COLORS.get(pin["decay"], ("#888888", "#ffffff"))
+        self.stage_lbl = QLabel(pin["decay"])
+        self.stage_lbl.setStyleSheet(
+            f"color: {fill_hex}; font-size: 10px; font-weight: 600; letter-spacing: 0.5px;")
+        lay.addWidget(self.stage_lbl)
+
+        # Timer row
         self.timer_lbl = QLabel("calculating...", objectName="idoc_timer")
         lay.addWidget(self.timer_lbl)
 
-        self.setStyleSheet("IdocRow { background: #1e1e1e; border-radius: 6px; }"
-                           "IdocRow:hover { background: #252525; }")
+        self._normal_style  = (
+            f"DecayRow {{ background: {CARD}; border: 1px solid {BORDER}; "
+            f"border-radius: 10px; }}")
+        self._hover_style   = (
+            f"DecayRow {{ background: #20205a; border: 1px solid rgba(39,152,246,64); "
+            f"border-radius: 10px; }}")
+        self._expired_style = (
+            f"DecayRow {{ background: #2a0818; border: 1px solid rgba(247,13,55,64); "
+            f"border-radius: 10px; }}")
+        self.setStyleSheet(self._normal_style)
 
     def update_timer(self, now: float):
-        set_at = self._pin.get("idoc_set_at")
+        set_at = self._pin.get("decay_set_at") or self._pin.get("idoc_set_at")
+        decay  = self._pin["decay"]
+        duration = STAGE_DURATION.get(decay, 0)
+        next_st  = NEXT_STAGE.get(decay)
+
         if not set_at:
-            self.timer_lbl.setText("timer not set")
+            self.timer_lbl.setText("⚠  no timer set — edit pin to start")
+            self.timer_lbl.setStyleSheet(
+                f"color: {TEXT_DIM}; font-family: Consolas; font-size: 12px;")
             return
-        remaining = (set_at + IDOC_WINDOW) - now
+
+        remaining = (set_at + duration) - now
+
         if remaining <= 0:
-            self.timer_lbl.setText("⚠  EXPIRED — house may have fallen")
-            self.timer_lbl.setStyleSheet("color: #ff8800;")
+            if next_st is None:
+                self.timer_lbl.setText("⚠  COLLAPSED — house may be gone")
+                self.timer_lbl.setStyleSheet(
+                    f"color: {RED}; font-family: Consolas; font-size: 12px; font-weight: 600;")
+                self.setStyleSheet(self._expired_style)
+            else:
+                # Show how long overdue
+                overdue = abs(remaining)
+                h = int(overdue // 3600)
+                m = int((overdue % 3600) // 60)
+                self.timer_lbl.setText(f"⚠  {h:02d}:{m:02d} past → {next_st}")
+                self.timer_lbl.setStyleSheet(
+                    f"color: #ff8800; font-family: Consolas; font-size: 12px; font-weight: 600;")
+                self.setStyleSheet(self._expired_style)
         else:
             h = int(remaining // 3600)
             m = int((remaining % 3600) // 60)
             s = int(remaining % 60)
-            self.timer_lbl.setText(f"⏱  {h:02d}:{m:02d}:{s:02d} remaining")
+            if next_st is None:
+                label = "until collapse"
+            else:
+                label = f"→ {next_st}"
+            if remaining < 7200:
+                col = RED
+            elif remaining < 14400:
+                col = ORANGE
+            else:
+                col = GREEN
+            self.timer_lbl.setText(f"⏱  {h:02d}:{m:02d}:{s:02d} {label}")
+            self.timer_lbl.setStyleSheet(
+                f"color: {col}; font-family: Consolas; font-size: 12px; font-weight: 600;")
+            self.setStyleSheet(self._normal_style)
+
+    def enterEvent(self, ev):
+        self.setStyleSheet(self._hover_style)
+
+    def leaveEvent(self, ev):
+        self.setStyleSheet(self._normal_style)
 
     def mousePressEvent(self, ev):
         if ev.button() == Qt.MouseButton.LeftButton:
@@ -785,7 +917,7 @@ class MainWindow(QMainWindow):
         self.landmarks: list  = []
         self._filtered_pins:  list = []
         self._filtered_lm:    list = []
-        self._idoc_rows:      list[IdocRow] = []
+        self._idoc_rows:      list[DecayRow] = []
         self._show_labels = True
 
         self._build_ui()
@@ -819,20 +951,34 @@ class MainWindow(QMainWindow):
 
         # Sidebar
         sidebar_wrap = QWidget()
-        sidebar_wrap.setFixedWidth(260)
-        sidebar_wrap.setStyleSheet(f"background: {PANEL2};")
+        sidebar_wrap.setFixedWidth(280)
+        sidebar_wrap.setStyleSheet(f"background: {SIDEBAR};")
         sw_lay = QVBoxLayout(sidebar_wrap)
         sw_lay.setContentsMargins(0, 0, 0, 0)
         sw_lay.setSpacing(0)
+
+        # Sidebar header
+        hdr = QWidget()
+        hdr.setFixedHeight(52)
+        hdr.setStyleSheet(
+            f"background: {BG}; border-bottom: 1px solid {BORDER};")
+        hdr_lay = QHBoxLayout(hdr)
+        hdr_lay.setContentsMargins(16, 0, 16, 0)
+        title_lbl = QLabel("⚔  BRITANNIA")
+        title_lbl.setStyleSheet(
+            f"color: {TEXT}; font-size: 12px; font-weight: 700; letter-spacing: 3px;")
+        hdr_lay.addWidget(title_lbl)
+        hdr_lay.addStretch()
+        sw_lay.addWidget(hdr)
 
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
 
         inner = QWidget()
-        inner.setStyleSheet(f"background: {PANEL2};")
+        inner.setStyleSheet(f"background: {SIDEBAR};")
         inner_lay = QVBoxLayout(inner)
-        inner_lay.setContentsMargins(0, 0, 0, 0)
+        inner_lay.setContentsMargins(0, 4, 0, 16)
         inner_lay.setSpacing(0)
         inner_lay.setAlignment(Qt.AlignmentFlag.AlignTop)
         scroll.setWidget(inner)
@@ -843,92 +989,142 @@ class MainWindow(QMainWindow):
             inner_lay.addWidget(acc)
             return acc
 
+        def card_pad(w, h=12, v=4):
+            wrap = QWidget()
+            wrap.setStyleSheet("background: transparent;")
+            l = QHBoxLayout(wrap)
+            l.setContentsMargins(h, v, h, v)
+            l.addWidget(w)
+            return wrap
+
         # ---- 1. GO TO TILE ----
         goto_acc = add_section("Go To Tile", expanded=True)
         goto_w = QWidget()
+        goto_w.setStyleSheet("background: transparent;")
         goto_lay = QHBoxLayout(goto_w)
-        goto_lay.setContentsMargins(10, 4, 10, 4)
+        goto_lay.setContentsMargins(12, 4, 12, 8)
+        goto_lay.setSpacing(6)
         self.goto_x = QLineEdit(); self.goto_x.setPlaceholderText("X")
         self.goto_y = QLineEdit(); self.goto_y.setPlaceholderText("Y")
         go_btn = QPushButton("Go"); go_btn.setObjectName("primary")
-        go_btn.setFixedWidth(44)
-        goto_lay.addWidget(QLabel("X")); goto_lay.addWidget(self.goto_x)
-        goto_lay.addWidget(QLabel("Y")); goto_lay.addWidget(self.goto_y)
+        go_btn.setFixedWidth(56)
+        goto_lay.addWidget(self.goto_x)
+        goto_lay.addWidget(self.goto_y)
         goto_lay.addWidget(go_btn)
         go_btn.clicked.connect(self._goto)
         self.goto_x.returnPressed.connect(self._goto)
         self.goto_y.returnPressed.connect(self._goto)
         goto_acc.add_widget(goto_w)
 
-        # ---- 2. IDOCs ----
-        self._idoc_acc = add_section("IDOCs", expanded=True)
+        # ---- 2. DECAY TIMERS ----
+        self._idoc_acc = add_section("Decay Timers", expanded=True)
         self._idoc_container = QWidget()
+        self._idoc_container.setStyleSheet("background: transparent;")
         self._idoc_cl = QVBoxLayout(self._idoc_container)
-        self._idoc_cl.setContentsMargins(8, 4, 8, 4)
-        self._idoc_cl.setSpacing(4)
+        self._idoc_cl.setContentsMargins(10, 4, 10, 8)
+        self._idoc_cl.setSpacing(6)
         self._idoc_acc.add_widget(self._idoc_container)
 
         # ---- 3. PINS ----
         pins_acc = add_section("Pins", expanded=True)
-        self.pin_search = QLineEdit(); self.pin_search.setPlaceholderText("Search pins…")
-        self.pin_search.setContentsMargins(0, 0, 0, 0)
+        self.pin_search = QLineEdit()
+        self.pin_search.setPlaceholderText("Search pins…")
         self.pin_search.textChanged.connect(self._on_pin_search)
-        pins_acc.add_widget(self._pad(self.pin_search))
+        pins_acc.add_widget(card_pad(self.pin_search))
         self.pin_list = QListWidget()
-        self.pin_list.setFixedHeight(180)
+        self.pin_list.setFixedHeight(190)
         self.pin_list.itemClicked.connect(self._on_pin_list_click)
-        pins_acc.add_widget(self._pad(self.pin_list))
+        pins_acc.add_widget(card_pad(self.pin_list))
 
         # ---- 4. SELECTED PIN ----
         sel_acc = add_section("Selected Pin", expanded=True)
-        self.info_lbl = QLabel("Click a pin or right-click to drop one",
+        self.info_lbl = QLabel("Click a pin or right-click map to drop one",
                                objectName="pin_info")
         self.info_lbl.setWordWrap(True)
-        self.info_lbl.setContentsMargins(10, 4, 10, 4)
+        self.info_lbl.setContentsMargins(14, 6, 14, 10)
         sel_acc.add_widget(self.info_lbl)
 
         # ---- 5. LANDMARKS ----
         lm_acc = add_section("Landmarks", expanded=False)
-        self.lm_search = QLineEdit(); self.lm_search.setPlaceholderText("Search landmarks…")
+        self.lm_search = QLineEdit()
+        self.lm_search.setPlaceholderText("Search landmarks…")
         self.lm_search.textChanged.connect(self._on_lm_search)
-        lm_acc.add_widget(self._pad(self.lm_search))
+        lm_acc.add_widget(card_pad(self.lm_search))
         self.lm_list = QListWidget()
         self.lm_list.setFixedHeight(160)
         self.lm_list.itemClicked.connect(self._on_lm_click)
-        lm_acc.add_widget(self._pad(self.lm_list))
+        lm_acc.add_widget(card_pad(self.lm_list))
 
         # ---- 6. DISPLAY ----
         disp_acc = add_section("Display", expanded=False)
-        self.show_labels_cb = QCheckBox("Pin labels")
+        self.show_labels_cb = QCheckBox("Show pin labels")
         self.show_labels_cb.setChecked(True)
         self.show_labels_cb.stateChanged.connect(self._toggle_labels)
-        disp_acc.add_widget(self._pad(self.show_labels_cb))
-
-        # ---- 7. DECAY LEGEND ----
-        legend_acc = add_section("Decay Legend", expanded=False)
-        for stage, (fill, _) in DECAY_COLORS.items():
-            row_w = QWidget()
-            row_l = QHBoxLayout(row_w)
-            row_l.setContentsMargins(10, 2, 10, 2)
-            dot = QLabel("●")
-            dot.setStyleSheet(f"color: {fill}; font-size: 14px;")
-            row_l.addWidget(dot)
-            row_l.addWidget(QLabel(stage))
-            row_l.addStretch()
-            legend_acc.add_widget(row_w)
+        disp_acc.add_widget(card_pad(self.show_labels_cb))
 
         inner_lay.addStretch()
         splitter.addWidget(sidebar_wrap)
-        splitter.setSizes([1180, 260])
+        splitter.setSizes([1160, 280])
 
-        # Toolbar buttons
-        self.statusBar().setStyleSheet("QStatusBar { padding: 2px 8px; }")
+        # Status bar
+        self.statusBar().setStyleSheet(
+            f"QStatusBar {{ padding: 3px 10px; background: #0a0a0c; "
+            f"color: {TEXT_DIM}; font-size: 11px; border-top: 1px solid {BORDER}; }}")
         self._status_lbl = QLabel("")
         self.statusBar().addPermanentWidget(self._status_lbl)
 
-        reset_btn = QPushButton("⟳  Reset  [R]")
-        reset_btn.clicked.connect(self.canvas.reset_view)
-        self.statusBar().addWidget(reset_btn)
+        # Floating Reset button — top-left of map
+        self._reset_btn = QPushButton("⟳  Reset", self.canvas)
+        self._reset_btn.setStyleSheet(f"""
+            QPushButton {{
+                background: #1c1c1e;
+                color: {TEXT_MID};
+                border: 1px solid {BORDER};
+                border-radius: 7px;
+                padding: 6px 14px;
+                font-size: 12px;
+            }}
+            QPushButton:hover {{
+                background: {BLUE};
+                color: #ffffff;
+                border-color: {GOLD};
+            }}
+        """)
+        self._reset_btn.setFixedSize(100, 32)
+        self._reset_btn.move(12, 12)
+        self._reset_btn.raise_()
+        self._reset_btn.clicked.connect(self.canvas.reset_view)
+
+        # Floating decay legend — bottom-right of map
+        self._legend_card = QWidget(self.canvas)
+        self._legend_card.setStyleSheet(
+            "QWidget { background: rgba(20,20,22,200); border: 1px solid rgba(255,255,255,30); "
+            "border-radius: 10px; }")
+        leg_lay = QVBoxLayout(self._legend_card)
+        leg_lay.setContentsMargins(12, 10, 12, 10)
+        leg_lay.setSpacing(4)
+        hdr_lbl = QLabel("DECAY")
+        hdr_lbl.setStyleSheet(
+            f"color: {TEXT_DIM}; font-size: 9px; font-weight: 700; letter-spacing: 2px; "
+            "background: transparent; border: none;")
+        leg_lay.addWidget(hdr_lbl)
+        for stage, (fill, _) in DECAY_COLORS.items():
+            row_w = QWidget()
+            row_w.setStyleSheet("background: transparent; border: none;")
+            row_l = QHBoxLayout(row_w)
+            row_l.setContentsMargins(0, 0, 0, 0)
+            row_l.setSpacing(6)
+            dot = QLabel("●")
+            dot.setStyleSheet(f"color: {fill}; font-size: 11px; background: transparent; border: none;")
+            dot.setFixedWidth(14)
+            row_l.addWidget(dot)
+            lbl = QLabel(stage)
+            lbl.setStyleSheet(f"color: {TEXT_MID}; font-size: 11px; background: transparent; border: none;")
+            row_l.addWidget(lbl)
+            row_l.addStretch()
+            leg_lay.addWidget(row_w)
+        self._legend_card.adjustSize()
+        self._legend_card.raise_()
 
         # Keyboard shortcuts
         QAction("Reset", self, shortcut=QKeySequence("R"),
@@ -942,8 +1138,9 @@ class MainWindow(QMainWindow):
                                 triggered=lambda: self.pin_search.setFocus())
         self.addAction(search_action)
 
-    def _pad(self, w, h=8, v=2):
+    def _pad(self, w, h=12, v=4):
         wrap = QWidget()
+        wrap.setStyleSheet("background: transparent;")
         l = QHBoxLayout(wrap)
         l.setContentsMargins(h, v, h, v)
         l.addWidget(w)
@@ -979,6 +1176,8 @@ class MainWindow(QMainWindow):
             f"Scroll = zoom  │  Drag = pan  │  Ctrl+F = search"
         )
         self.canvas.reset_view()
+        self._legend_card.adjustSize()
+        self._reposition_legend()
 
     def _load_pins(self):
         if os.path.exists(PINS_FILE):
@@ -991,6 +1190,10 @@ class MainWindow(QMainWindow):
                 self.pins = []
         else:
             self.pins = []
+        # Migrate legacy idoc_set_at field
+        for p in self.pins:
+            if "decay_set_at" not in p and p.get("idoc_set_at"):
+                p["decay_set_at"] = p.pop("idoc_set_at")
         self.canvas.pins = self.pins
 
     def _save_pins(self):
@@ -1034,6 +1237,7 @@ class MainWindow(QMainWindow):
                 != QMessageBox.StandardButton.Yes:
             return
         self.pins = [p for p in self.pins if p["id"] != pin["id"]]
+        self.canvas.pins = self.pins
         self._save_pins()
         if self.canvas.selected == pin["id"]:
             self.canvas.selected = None
@@ -1118,22 +1322,25 @@ class MainWindow(QMainWindow):
     # IDOC list
     # ----------------------------------------------------------------
     def _refresh_idoc_list(self):
-        # Clear existing rows
         while self._idoc_cl.count():
             item = self._idoc_cl.takeAt(0)
             if item.widget():
                 item.widget().deleteLater()
         self._idoc_rows = []
 
-        danger = [p for p in self.pins if p["decay"] == "In Danger of Collapsing"]
-        if not danger:
-            empty = QLabel("No IDOCs tracked", objectName="idoc_empty")
+        # Sort: IDOC first, then by stage index descending (most decayed first)
+        stage_order = {s: i for i, s in enumerate(DECAY_STAGES)}
+        sorted_pins = sorted(self.pins,
+                             key=lambda p: -stage_order.get(p["decay"], 0))
+
+        if not sorted_pins:
+            empty = QLabel("No pins tracked", objectName="idoc_empty")
             empty.setContentsMargins(10, 6, 10, 6)
             self._idoc_cl.addWidget(empty)
             return
 
-        for pin in danger:
-            row = IdocRow(pin)
+        for pin in sorted_pins:
+            row = DecayRow(pin)
             row.clicked.connect(lambda p: (self._select_pin(p),
                                            self.canvas.jump_to(p["x"], p["y"],
                                                                zoom=max(self.canvas._zoom, 1.0))))
@@ -1185,6 +1392,15 @@ class MainWindow(QMainWindow):
     def _toggle_labels(self):
         self.canvas._show_labels = self.show_labels_cb.isChecked()
         self.canvas._render()
+
+    def resizeEvent(self, ev):
+        super().resizeEvent(ev)
+        self._reposition_legend()
+
+    def _reposition_legend(self):
+        ch = self.canvas.height()
+        lh = self._legend_card.height()
+        self._legend_card.move(14, ch - lh - 14)
 
 
 # ---------------------------------------------------------------------------

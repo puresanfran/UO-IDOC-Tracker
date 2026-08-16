@@ -1,12 +1,22 @@
 [
   {
-    "id": 1786840258569,
-    "x": 2303,
-    "y": 1186,
-    "label": "dick",
+    "id": 1786860621020,
+    "x": 2760,
+    "y": 686,
+    "label": "Small Hatchet",
     "house_type": "Small 7x7",
-    "decay": "In Danger of Collapsing",
+    "decay": "Fairly Worn",
     "notes": "",
-    "idoc_set_at": 1786840258.5693243
+    "decay_set_at": 1786861507.4294136
+  },
+  {
+    "id": 1786862794047,
+    "x": 882,
+    "y": 489,
+    "label": "20K Cash",
+    "house_type": "Small 7x7",
+    "decay": "Somewhat Worn",
+    "notes": "20k on ground",
+    "decay_set_at": 1786862794.0470262
   }
 ]
