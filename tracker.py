@@ -15,7 +15,6 @@ Controls:
 """
 
 import os, sys, json, time, math
-from PIL import ImageEnhance, ImageOps, ImageFilter
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QHBoxLayout, QVBoxLayout,
     QLabel, QPushButton, QLineEdit, QListWidget, QListWidgetItem,
@@ -31,7 +30,6 @@ from PyQt6.QtCore import (
     Qt, QTimer, QPointF, QRectF, QSizeF, pyqtSignal, QThread, QObject,
 )
 from PIL import Image
-import numpy as np
 
 # ---------------------------------------------------------------------------
 # Paths
@@ -236,109 +234,6 @@ def load_landmarks():
     return landmarks
 
 # ---------------------------------------------------------------------------
-# Map stylization  (Legend of Zelda overworld aesthetic)
-# ---------------------------------------------------------------------------
-def stylize_map(img: Image.Image) -> Image.Image:
-    """
-    Remap UOAM radar colours to a Zelda: A Link to the Past overworld palette.
-    Works in HSV space so each terrain type gets a distinct, vivid colour
-    regardless of the muted radar-col source:
-
-      Blue hues   → deep ocean / coastal blue
-      Green hues  → grass (bright) or forest (dark) based on value
-      Yellow hues → sand / desert
-      Low-sat     → stone / mountain grey
-      Very dark   → swamp / dungeon floor
-    Then posterize to 4 bits to get that chunky 16-colour-per-channel look.
-    """
-    img = img.convert("RGB")
-    arr = np.array(img, dtype=np.float32) / 255.0   # (H, W, 3)
-
-    r, g, b = arr[..., 0], arr[..., 1], arr[..., 2]
-    cmax  = np.maximum(np.maximum(r, g), b)
-    cmin  = np.minimum(np.minimum(r, g), b)
-    delta = cmax - cmin
-
-    # ---- hue 0-1 ----
-    h = np.zeros_like(r)
-    m = delta > 0
-    rm = m & (r == cmax)
-    h[rm] = ((g[rm] - b[rm]) / delta[rm]) % 6
-    gm = m & (g == cmax)
-    h[gm] = (b[gm] - r[gm]) / delta[gm] + 2
-    bm = m & (b == cmax)
-    h[bm] = (r[bm] - g[bm]) / delta[bm] + 4
-    h /= 6.0
-
-    with np.errstate(invalid="ignore", divide="ignore"):
-        s = np.where(cmax > 0, delta / cmax, 0.0)
-    v = cmax
-
-    out = np.zeros_like(arr)
-
-    # Water / ocean  (blue)
-    water = (h > 0.54) & (h < 0.76) & (s > 0.15)
-    d = np.clip(v[water], 0, 1)
-    out[water, 0] = 0.04 + d * 0.08
-    out[water, 1] = 0.28 + d * 0.20
-    out[water, 2] = 0.60 + d * 0.30
-
-    # Deep forest  (dark green)
-    deep_forest = (h > 0.26) & (h < 0.46) & (s > 0.18) & (v < 0.38)
-    out[deep_forest] = [0.06, 0.24, 0.06]
-
-    # Grass / light forest  (bright green)
-    grass = (h > 0.26) & (h < 0.46) & (s > 0.18) & (v >= 0.38)
-    d = np.clip(v[grass], 0, 1)
-    out[grass, 0] = 0.14 + d * 0.10
-    out[grass, 1] = 0.52 + d * 0.28
-    out[grass, 2] = 0.10 + d * 0.08
-
-    # Desert / sand  (warm yellow)
-    desert = (h > 0.08) & (h < 0.22) & (s > 0.12) & (v > 0.35)
-    d = np.clip(v[desert], 0, 1)
-    out[desert, 0] = 0.70 + d * 0.20
-    out[desert, 1] = 0.58 + d * 0.18
-    out[desert, 2] = 0.18
-
-    # Swamp (yellow-green, dark)
-    swamp = (h > 0.20) & (h < 0.30) & (v < 0.36) & (s > 0.10)
-    out[swamp] = [0.12, 0.22, 0.06]
-
-    # Snow / ice  (high value, low sat, blue-ish)
-    snow = (s < 0.14) & (v > 0.70)
-    d = np.clip(v[snow], 0, 1)
-    out[snow, 0] = 0.72 + d * 0.20
-    out[snow, 1] = 0.78 + d * 0.16
-    out[snow, 2] = 0.88 + d * 0.10
-
-    # Rock / mountain  (grey-brown, mid value)
-    rock = (s < 0.14) & (v <= 0.70) & (v > 0.10)
-    d = np.clip(v[rock], 0, 1)
-    out[rock, 0] = 0.28 + d * 0.30
-    out[rock, 1] = 0.26 + d * 0.28
-    out[rock, 2] = 0.24 + d * 0.26
-
-    # Very dark (dungeon floors, pits)
-    dark = v <= 0.10
-    out[dark] = [0.04, 0.04, 0.06]
-
-    # Anything uncategorised: copy original with boosted saturation
-    covered = water | deep_forest | grass | desert | swamp | snow | rock | dark
-    out[~covered] = arr[~covered]
-    # boost uncovered sat inline
-    unc = ~covered
-    out[unc] = np.clip(arr[unc] * 1.6 - 0.15, 0, 1)
-
-    # Posterize: snap to 4-bit steps (16 levels / channel)
-    out = np.floor(np.clip(out, 0, 1) * 15) / 15.0
-
-    result = Image.fromarray((out * 255).astype(np.uint8), "RGB")
-    # Gentle unsharp to keep terrain edges crisp
-    result = result.filter(ImageFilter.UnsharpMask(radius=0.8, percent=55, threshold=3))
-    return result
-
-# ---------------------------------------------------------------------------
 # PIL image → QPixmap
 # ---------------------------------------------------------------------------
 def pil_to_qpixmap(img: Image.Image) -> QPixmap:
@@ -541,7 +436,6 @@ class MapCanvas(QGraphicsView):
     # ----------------------------------------------------------------
     def load_tile(self, scale: int, path: str):
         img = Image.open(path).convert("RGB")
-        img = stylize_map(img)
         self.tiles[scale] = pil_to_qpixmap(img)
 
     def _best_scale(self) -> int:
