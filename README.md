@@ -25,11 +25,10 @@ That's it — no Python, no dependencies, no setup.
 | Left-drag | Pan the map |
 | Scroll wheel | Zoom in / out |
 | Right-click map | Drop a new pin |
-| Left-click pin | Select pin |
+| Left-click pin | Open pin bubble (notes preview) |
 | Right-click pin | Edit or delete pin |
-| R | Reset view |
-| Delete | Delete selected pin |
 | Ctrl+F | Focus pin search |
+| R | Reset view |
 
 ---
 
@@ -40,6 +39,7 @@ Right-click anywhere on the map to drop a pin. Each pin records:
 - **Label** — a nickname for the house
 - **House type** — size/style
 - **Decay status** — current stage
+- **Time remaining** — manually set how much time is left in the current stage
 - **Notes** — anything extra
 
 The app uses UO's real decay timing:
@@ -54,6 +54,10 @@ The app uses UO's real decay timing:
 | In Danger of Collapsing | 24h |
 
 Countdowns run in real time and survive app restarts. The **Decay Timers** panel in the sidebar shows all tracked houses sorted by urgency.
+
+### Notes
+- Left-click a pin on the map to open a bubble with a short notes preview
+- In the Decay Timers panel, hover the 📋 icon next to a pin's name to read the full notes
 
 ---
 
@@ -79,7 +83,7 @@ Source also expects the UOAM map files at `E:\UOAM\` (MAP0-1/2/4/8.BMP and the .
 
 ```
 pip install pyinstaller
-python -m PyInstaller --onefile --windowed --name "BritanniaHouseTracker" \
+python -m PyInstaller --onefile --windowed --icon icon.ico --name "BritanniaHouseTracker" \
   --add-data "E:\UOAM\MAP0-1.BMP;uoam" \
   --add-data "E:\UOAM\MAP0-2.BMP;uoam" \
   --add-data "E:\UOAM\MAP0-4.BMP;uoam" \

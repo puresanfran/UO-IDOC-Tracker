@@ -122,6 +122,14 @@ QSS = f"""
     color: {TEXT};
     outline: 0;
 }}
+QToolTip {{
+    background: {CARD};
+    color: {TEXT};
+    border: 1px solid rgba(255,255,255,40);
+    padding: 6px 8px;
+    border-radius: 6px;
+    font-size: 12px;
+}}
 QMainWindow, QWidget {{ background: {BG}; }}
 QSplitter::handle {{ background: {BORDER}; width: 1px; }}
 
@@ -403,6 +411,7 @@ class PinDialog(QDialog):
         self.decay_combo = QComboBox()
         self.decay_combo.addItems(DECAY_STAGES)
         self.decay_combo.setCurrentText(pin["decay"] if pin else DECAY_STAGES[0])
+        self.decay_combo.currentTextChanged.connect(self._on_decay_changed)
         field("Decay Status", self.decay_combo)
 
         self.notes_edit = QTextEdit()
@@ -411,6 +420,34 @@ class PinDialog(QDialog):
         if pin:
             self.notes_edit.setPlainText(pin.get("notes", ""))
         field("Notes", self.notes_edit)
+
+        # Time remaining — lets you set how much time is left in the current stage
+        time_w = QWidget()
+        time_w.setStyleSheet("background: transparent;")
+        time_l = QHBoxLayout(time_w)
+        time_l.setContentsMargins(0, 0, 0, 0)
+        time_l.setSpacing(6)
+        self.remain_h = QLineEdit(); self.remain_h.setPlaceholderText("HH")
+        self.remain_m = QLineEdit(); self.remain_m.setPlaceholderText("MM")
+        self.remain_s = QLineEdit(); self.remain_s.setPlaceholderText("SS")
+        for w in (self.remain_h, self.remain_m, self.remain_s):
+            w.setFixedWidth(54)
+        time_l.addWidget(self.remain_h)
+        time_l.addWidget(QLabel(":"))
+        time_l.addWidget(self.remain_m)
+        time_l.addWidget(QLabel(":"))
+        time_l.addWidget(self.remain_s)
+        time_l.addStretch()
+        # Pre-fill from existing timer
+        existing_ts = (pin.get("decay_set_at") or pin.get("idoc_set_at")) if pin else None
+        if existing_ts:
+            decay_key = pin["decay"] if pin else DECAY_STAGES[0]
+            dur = STAGE_DURATION.get(decay_key, 0)
+            remaining = max(0, int((existing_ts + dur) - time.time()))
+            self.remain_h.setText(str(remaining // 3600))
+            self.remain_m.setText(str((remaining % 3600) // 60))
+            self.remain_s.setText(str(remaining % 60))
+        field("Time remaining in stage", time_w)
 
         lay.addSpacing(4)
         btns = QDialogButtonBox(
@@ -423,12 +460,24 @@ class PinDialog(QDialog):
 
         self.label_edit.setFocus()
 
+    def _on_decay_changed(self, stage):
+        # Reset to full duration when stage changes
+        dur = STAGE_DURATION.get(stage, 0)
+        self.remain_h.setText(str(dur // 3600))
+        self.remain_m.setText(str((dur % 3600) // 60))
+        self.remain_s.setText("0")
+
     def _save(self):
-        decay     = self.decay_combo.currentText()
-        old_decay = self._pin["decay"] if self._pin else None
-        old_set   = self._pin.get("decay_set_at") or self._pin.get("idoc_set_at") if self._pin else None
-        # Preserve timestamp if the stage didn't change, otherwise start fresh
-        decay_set_at = old_set if (old_decay == decay and old_set) else time.time()
+        decay = self.decay_combo.currentText()
+        try:
+            h = int(self.remain_h.text() or 0)
+            m = int(self.remain_m.text() or 0)
+            s = int(self.remain_s.text() or 0)
+        except ValueError:
+            h = m = s = 0
+        remaining    = h * 3600 + m * 60 + s
+        dur          = STAGE_DURATION.get(decay, 0)
+        decay_set_at = time.time() - (dur - remaining)
 
         self.result_pin = {
             "id":           self._pin["id"] if self._pin else int(time.time() * 1000),
@@ -605,6 +654,10 @@ class MapCanvas(QGraphicsView):
         self._pin_item._rect = QRectF(0, 0, vw, vh)
         self._pin_item.update()
 
+        mw = self.window()
+        if hasattr(mw, "_reposition_bubble"):
+            mw._reposition_bubble()
+
     # ----------------------------------------------------------------
     # Animation
     # ----------------------------------------------------------------
@@ -696,6 +749,8 @@ class MapCanvas(QGraphicsView):
         mw = self.window()
         if hasattr(mw, "_reposition_legend"):
             mw._reposition_legend()
+        if hasattr(mw, "_reposition_bubble"):
+            mw._reposition_bubble()
 
     # ----------------------------------------------------------------
     # Pin helpers
@@ -814,41 +869,46 @@ class DecayRow(QWidget):
         self.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
 
         lay = QVBoxLayout(self)
-        lay.setContentsMargins(12, 10, 12, 10)
-        lay.setSpacing(4)
+        lay.setContentsMargins(10, 6, 10, 6)
+        lay.setSpacing(0)
 
-        # Top row: label + coords
+        fill_hex, _ = DECAY_COLORS.get(pin["decay"], ("#888888", "#ffffff"))
+
+        # Top row: colored dot + label + coords
         top = QHBoxLayout()
-        top.setSpacing(6)
+        top.setSpacing(5)
+        dot = QLabel("●")
+        dot.setStyleSheet(f"color: {fill_hex}; font-size: 20px; line-height: 1;")
+        dot.setFixedWidth(22)
+        top.addWidget(dot)
         label = pin.get("label") or pin["house_type"].split()[0]
         name_lbl = QLabel(label, objectName="idoc_name")
         top.addWidget(name_lbl)
+
+        notes = pin.get("notes", "").strip()
+        if notes:
+            note_icon = QLabel("📋")
+            note_icon.setFixedWidth(18)
+            note_icon.setStyleSheet("font-size: 11px; background: transparent;")
+            note_icon.setToolTip(notes)
+            top.addWidget(note_icon)
+
         top.addStretch()
         coord_lbl = QLabel(f"{pin['x']}, {pin['y']}")
         coord_lbl.setStyleSheet(f"color: {TEXT_DIM}; font-size: 11px; font-family: Consolas;")
         top.addWidget(coord_lbl)
         lay.addLayout(top)
 
-        # Stage badge
-        fill_hex, _ = DECAY_COLORS.get(pin["decay"], ("#888888", "#ffffff"))
-        self.stage_lbl = QLabel(pin["decay"])
-        self.stage_lbl.setStyleSheet(
-            f"color: {fill_hex}; font-size: 10px; font-weight: 600; letter-spacing: 0.5px;")
-        lay.addWidget(self.stage_lbl)
-
-        # Timer row
+        # Timer row — left-aligned under dot
         self.timer_lbl = QLabel("calculating...", objectName="idoc_timer")
         lay.addWidget(self.timer_lbl)
 
         self._normal_style  = (
-            f"DecayRow {{ background: {CARD}; border: 1px solid {BORDER}; "
-            f"border-radius: 10px; }}")
+            f"DecayRow {{ background: transparent; border: none; }}")
         self._hover_style   = (
-            f"DecayRow {{ background: #20205a; border: 1px solid rgba(39,152,246,64); "
-            f"border-radius: 10px; }}")
+            f"DecayRow {{ background: rgba(39,152,246,18); border: none; }}")
         self._expired_style = (
-            f"DecayRow {{ background: #2a0818; border: 1px solid rgba(247,13,55,64); "
-            f"border-radius: 10px; }}")
+            f"DecayRow {{ background: rgba(247,13,55,18); border: none; }}")
         self.setStyleSheet(self._normal_style)
 
     def update_timer(self, now: float):
@@ -888,12 +948,14 @@ class DecayRow(QWidget):
                 label = "until collapse"
             else:
                 label = f"→ {next_st}"
-            if remaining < 7200:
+            if decay == "In Danger of Collapsing":
+                col = RED
+            elif remaining < 7200:
                 col = RED
             elif remaining < 14400:
                 col = ORANGE
             else:
-                col = GREEN
+                col = GOLD
             self.timer_lbl.setText(f"⏱  {h:02d}:{m:02d}:{s:02d} {label}")
             self.timer_lbl.setStyleSheet(
                 f"color: {col}; font-family: Consolas; font-size: 12px; font-weight: 600;")
@@ -913,6 +975,86 @@ class DecayRow(QWidget):
 # ---------------------------------------------------------------------------
 # Main window
 # ---------------------------------------------------------------------------
+class PinBubble(QWidget):
+    """Floating info bubble that appears near a pin on left-click."""
+    def __init__(self, pin: dict, parent=None):
+        super().__init__(parent)
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        self.setAttribute(Qt.WidgetAttribute.WA_NoSystemBackground)
+
+        lay = QVBoxLayout(self)
+        lay.setContentsMargins(14, 12, 14, 12)
+        lay.setSpacing(4)
+
+        fill_hex, _ = DECAY_COLORS.get(pin["decay"], ("#888888", "#ffffff"))
+
+        # Label + coords
+        top = QHBoxLayout()
+        label = pin.get("label") or pin["house_type"].split()[0]
+        name_lbl = QLabel(f"<b>{label}</b>")
+        name_lbl.setStyleSheet(f"color: {TEXT}; font-size: 13px; background: transparent;")
+        top.addWidget(name_lbl)
+        top.addStretch()
+        coord_lbl = QLabel(f"{pin['x']}, {pin['y']}")
+        coord_lbl.setStyleSheet(f"color: {TEXT_DIM}; font-size: 11px; font-family: Consolas; background: transparent;")
+        top.addWidget(coord_lbl)
+        lay.addLayout(top)
+
+        # House type
+        type_lbl = QLabel(pin["house_type"])
+        type_lbl.setStyleSheet(f"color: {TEXT_DIM}; font-size: 11px; background: transparent;")
+        lay.addWidget(type_lbl)
+
+        # Decay stage
+        decay_lbl = QLabel(pin["decay"])
+        decay_lbl.setStyleSheet(f"color: {fill_hex}; font-size: 11px; font-weight: 600; background: transparent;")
+        lay.addWidget(decay_lbl)
+
+        # Countdown
+        set_at = pin.get("decay_set_at") or pin.get("idoc_set_at")
+        if set_at:
+            dur = STAGE_DURATION.get(pin["decay"], 0)
+            remaining = max(0, int((set_at + dur) - time.time()))
+            h, m, s = remaining // 3600, (remaining % 3600) // 60, remaining % 60
+            next_st = NEXT_STAGE.get(pin["decay"])
+            suffix = f"→ {next_st}" if next_st else "until collapse"
+            col = RED if remaining < 7200 else ORANGE if remaining < 14400 else GREEN
+            timer_lbl = QLabel(f"⏱ {h:02d}:{m:02d}:{s:02d} {suffix}")
+            timer_lbl.setStyleSheet(f"color: {col}; font-family: Consolas; font-size: 11px; background: transparent;")
+            lay.addWidget(timer_lbl)
+
+        # Notes
+        notes = pin.get("notes", "").strip()
+        if notes:
+            sep = QFrame()
+            sep.setFrameShape(QFrame.Shape.HLine)
+            sep.setStyleSheet(f"color: rgba(255,255,255,30); background: rgba(255,255,255,30);")
+            sep.setFixedHeight(1)
+            lay.addWidget(sep)
+            words = notes.split()
+            short = " ".join(words[:8]) + ("…" if len(words) > 8 else "")
+            notes_lbl = QLabel(short)
+            notes_lbl.setWordWrap(False)
+            notes_lbl.setMaximumWidth(260)
+            notes_lbl.setStyleSheet(f"color: {TEXT_MID}; font-size: 11px; background: transparent;")
+            lay.addWidget(notes_lbl)
+
+        self.setStyleSheet(
+            "PinBubble { background: rgba(18,18,20,230); border: 1px solid rgba(155,89,245,120); "
+            "border-radius: 10px; }")
+        self.adjustSize()
+
+    def paintEvent(self, ev):
+        from PyQt6.QtGui import QPainterPath
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        path = QPainterPath()
+        path.addRoundedRect(QRectF(self.rect()), 10, 10)
+        painter.fillPath(path, QColor(18, 18, 20, 230))
+        painter.setPen(QPen(QColor(155, 89, 245, 120), 1))
+        painter.drawPath(path)
+
+
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -925,6 +1067,7 @@ class MainWindow(QMainWindow):
         self._filtered_pins:  list = []
         self._filtered_lm:    list = []
         self._idoc_rows:      list[DecayRow] = []
+        self._bubble:         PinBubble | None = None
         self._show_labels = True
 
         self._build_ui()
@@ -1043,14 +1186,6 @@ class MainWindow(QMainWindow):
         self.pin_list.itemClicked.connect(self._on_pin_list_click)
         pins_acc.add_widget(card_pad(self.pin_list))
 
-        # ---- 4. SELECTED PIN ----
-        sel_acc = add_section("Selected Pin", expanded=True)
-        self.info_lbl = QLabel("Click a pin or right-click map to drop one",
-                               objectName="pin_info")
-        self.info_lbl.setWordWrap(True)
-        self.info_lbl.setContentsMargins(14, 6, 14, 10)
-        sel_acc.add_widget(self.info_lbl)
-
         # ---- 5. LANDMARKS ----
         lm_acc = add_section("Landmarks", expanded=False)
         self.lm_search = QLineEdit()
@@ -1133,6 +1268,16 @@ class MainWindow(QMainWindow):
         self._legend_card.adjustSize()
         self._legend_card.raise_()
 
+        # Watermark — bottom-right of map
+        wm_text = 'Made with <span style="color:#f70d37;">♥</span> by Codename Duchess'
+        self._watermark = QLabel(wm_text, self.canvas.viewport())
+        self._watermark.setTextFormat(Qt.TextFormat.RichText)
+        self._watermark.setStyleSheet(
+            f"color: rgba(255,255,255,45); font-size: 10px; background: transparent;")
+        self._watermark.setFixedSize(220, 16)
+        self._watermark.show()
+        self._watermark.raise_()
+
         # Keyboard shortcuts
         QAction("Reset", self, shortcut=QKeySequence("R"),
                 triggered=self.canvas.reset_view).setParent(self)
@@ -1143,6 +1288,7 @@ class MainWindow(QMainWindow):
         self.addAction(del_action)
         search_action = QAction("Search", self, shortcut=QKeySequence("Ctrl+F"),
                                 triggered=lambda: self.pin_search.setFocus())
+        search_action.setShortcutContext(Qt.ShortcutContext.ApplicationShortcut)
         self.addAction(search_action)
 
     def _pad(self, w, h=12, v=4):
@@ -1214,6 +1360,7 @@ class MainWindow(QMainWindow):
     # Pin ops
     # ----------------------------------------------------------------
     def _drop_pin(self, tx: float, ty: float):
+        self._dismiss_bubble()
         dlg = PinDialog(self, int(tx), int(ty))
         if dlg.exec() == QDialog.DialogCode.Accepted and dlg.result_pin:
             self.pins.append(dlg.result_pin)
@@ -1248,7 +1395,7 @@ class MainWindow(QMainWindow):
         self._save_pins()
         if self.canvas.selected == pin["id"]:
             self.canvas.selected = None
-            self.info_lbl.setText("Click a pin or right-click to drop one")
+            pass
         self._refresh_pin_list()
         self._refresh_idoc_list()
         self.canvas._render()
@@ -1266,25 +1413,52 @@ class MainWindow(QMainWindow):
         self.canvas._render()
 
     def _show_pin_info(self, pin: dict):
-        lines = [
-            f"Label:  {pin.get('label') or '(none)'}",
-            f"Type:   {pin['house_type']}",
-            f"Decay:  {pin['decay']}",
-            f"Tile:   {pin['x']}, {pin['y']}",
-        ]
-        if pin.get("notes"):
-            lines.append(f"Notes:  {pin['notes']}")
-        self.info_lbl.setText("\n".join(lines))
+        pass
 
     # ----------------------------------------------------------------
     # Canvas signals
     # ----------------------------------------------------------------
+    def _dismiss_bubble(self):
+        if self._bubble:
+            self._bubble.hide()
+            self._bubble.deleteLater()
+            self._bubble = None
+
+    def _show_bubble(self, pin: dict, vp_x: float, vp_y: float):
+        self._dismiss_bubble()
+        cvp = self.canvas.viewport()
+        bubble = PinBubble(pin, cvp)
+        bubble._pin = pin
+        bubble.show()
+        bubble.raise_()
+        self._bubble = bubble
+        self._reposition_bubble()
+
+    def _reposition_bubble(self):
+        if not self._bubble:
+            return
+        cvp = self.canvas.viewport()
+        pin = self._bubble._pin
+        pin_vx, pin_vy = self.canvas._tile_to_vp(pin["x"], pin["y"])
+        r = max(6, min(14, int(self.canvas._zoom * 10)))
+        bw = self._bubble.width()
+        bh = self._bubble.height()
+        px = int(pin_vx) + r + 10
+        py = int(pin_vy) - bh // 2
+        py = max(4, min(py, cvp.height() - bh - 4))
+        px = min(px, cvp.width() - bw - 4)
+        self._bubble.move(px, py)
+        self._bubble.raise_()
+
     def _on_tile_clicked(self, tx: float, ty: float):
-        pin, dist = self.canvas._nearest_pin_at(
-            (tx - self.canvas._view_x) * self.canvas._zoom,
-            (ty - self.canvas._view_y) * self.canvas._zoom)
+        vp_x = (tx - self.canvas._view_x) * self.canvas._zoom
+        vp_y = (ty - self.canvas._view_y) * self.canvas._zoom
+        pin, dist = self.canvas._nearest_pin_at(vp_x, vp_y)
         if pin and dist <= MapCanvas.PIN_HIT_PX:
             self._select_pin(pin)
+            self._show_bubble(pin, vp_x, vp_y)
+        else:
+            self._dismiss_bubble()
 
     def _pin_context_menu(self, pin: dict, global_pos):
         menu = QMenu(self)
@@ -1346,13 +1520,19 @@ class MainWindow(QMainWindow):
             self._idoc_cl.addWidget(empty)
             return
 
-        for pin in sorted_pins:
+        for i, pin in enumerate(sorted_pins):
             row = DecayRow(pin)
             row.clicked.connect(lambda p: (self._select_pin(p),
                                            self.canvas.jump_to(p["x"], p["y"],
                                                                zoom=max(self.canvas._zoom, 1.0))))
             self._idoc_cl.addWidget(row)
             self._idoc_rows.append(row)
+            if i < len(sorted_pins) - 1:
+                sep = QFrame()
+                sep.setFrameShape(QFrame.Shape.HLine)
+                sep.setFixedHeight(1)
+                sep.setStyleSheet("background: rgba(255,255,255,20); border: none;")
+                self._idoc_cl.addWidget(sep)
 
     def _idoc_tick(self):
         now = time.time()
@@ -1405,9 +1585,15 @@ class MainWindow(QMainWindow):
         self._reposition_legend()
 
     def _reposition_legend(self):
-        ch = self.canvas.height()
+        cvp = self.canvas.viewport()
+        ch = cvp.height()
+        cw = cvp.width()
         lh = self._legend_card.height()
         self._legend_card.move(14, ch - lh - 14)
+        if hasattr(self, "_watermark"):
+            ww = self._watermark.width()
+            wh = self._watermark.height()
+            self._watermark.move(cw - ww - 10, ch - wh - 8)
 
 
 # ---------------------------------------------------------------------------
