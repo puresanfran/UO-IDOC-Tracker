@@ -887,11 +887,31 @@ class DecayRow(QWidget):
 
         notes = pin.get("notes", "").strip()
         if notes:
-            note_icon = QLabel("📋")
-            note_icon.setFixedWidth(18)
-            note_icon.setStyleSheet("font-size: 11px; background: transparent;")
-            note_icon.setToolTip(notes)
-            top.addWidget(note_icon)
+            note_btn = QToolButton()
+            note_btn.setText("📋")
+            note_btn.setFixedSize(20, 20)
+            note_btn.setStyleSheet(
+                "QToolButton { font-size: 11px; background: transparent; border: none; }"
+                "QToolButton:hover { background: rgba(255,255,255,15); border-radius: 3px; }")
+            note_btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+            def _show_notes(checked=False, n=notes, btn=note_btn):
+                popup = QDialog(btn.window())
+                popup.setWindowFlags(Qt.WindowType.Popup)
+                popup.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
+                popup.setStyleSheet(
+                    f"QDialog {{ background: {CARD}; border: 1px solid rgba(255,255,255,40); border-radius: 8px; }}"
+                    f"QLabel {{ color: {TEXT}; font-size: 12px; background: transparent; }}")
+                vl = QVBoxLayout(popup)
+                vl.setContentsMargins(12, 10, 12, 10)
+                lbl = QLabel(n)
+                lbl.setWordWrap(True)
+                lbl.setMaximumWidth(260)
+                vl.addWidget(lbl)
+                pos = btn.mapToGlobal(btn.rect().bottomLeft())
+                popup.move(pos)
+                popup.exec()
+            note_btn.clicked.connect(_show_notes)
+            top.addWidget(note_btn)
 
         top.addStretch()
         coord_lbl = QLabel(f"{pin['x']}, {pin['y']}")
