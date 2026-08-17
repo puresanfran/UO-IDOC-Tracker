@@ -1,22 +1,11 @@
 [
   {
-    "id": 1786860621020,
-    "x": 2760,
-    "y": 686,
-    "label": "Small Hatchet",
-    "house_type": "Small 7x7",
-    "decay": "Fairly Worn",
-    "notes": "",
-    "decay_set_at": 1786861507.4294136
-  },
-  {
-    "id": 1786862794047,
-    "x": 882,
-    "y": 489,
-    "label": "20K Cash",
-    "house_type": "Small 7x7",
-    "decay": "Somewhat Worn",
-    "notes": "20k on ground",
-    "decay_set_at": 1786862794.0470262
+    "x": 1429,
+    "y": 1696,
+    "label": "Brit Bank IDOC",
+    "house_type": "Small Stone House",
+    "decay": "In Danger of Collapsing",
+    "notes": "Example IDOC pin near Britain Bank. Right-click to edit or delete.",
+    "decay_set_at": 1786903399
   }
 ]

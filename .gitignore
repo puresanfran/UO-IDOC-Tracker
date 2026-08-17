@@ -3,3 +3,6 @@ __pycache__/
 output/
 backup/
 source_checksums.json
+
+# Personal pin data — committed once as a starter, ignored after
+pins.json
