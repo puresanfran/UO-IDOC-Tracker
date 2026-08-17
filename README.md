@@ -85,21 +85,4 @@ Then:
 python tracker.py
 ```
 
-Source also expects the UOAM map files at `E:\UOAM\` (MAP0-1/2/4/8.BMP and the .MAP landmark files). The standalone exe has these bundled in.
-
----
-
-## Building the Exe
-
-```
-pip install pyinstaller
-python -m PyInstaller --onefile --windowed --icon icon.ico --name "BritanniaHouseTracker" \
-  --add-data "E:\UOAM\MAP0-1.BMP;uoam" \
-  --add-data "E:\UOAM\MAP0-2.BMP;uoam" \
-  --add-data "E:\UOAM\MAP0-4.BMP;uoam" \
-  --add-data "E:\UOAM\MAP0-8.BMP;uoam" \
-  --add-data "E:\UOAM\Common.MAP;uoam" \
-  --add-data "E:\UOAM\Atlas.MAP;uoam" \
-  --add-data "E:\UOAM\Dungeons.MAP;uoam" \
-  tracker.py
-```
+> **Note:** Running from source requires the UOAM BMP map files and .MAP landmark files. These are bundled inside the standalone exe but must be provided separately for source runs.
