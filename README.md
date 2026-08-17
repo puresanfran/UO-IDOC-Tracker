@@ -6,6 +6,16 @@ An interactive map tool for tracking house locations, decay status, and IDOC cou
 
 ---
 
+## ⚠️ Antivirus Warning
+
+Norton, Windows Defender, and other antivirus tools may flag `BritanniaHouseTracker.exe` as suspicious. **This is a false positive.** It is caused by PyInstaller — the tool used to package the app — which is commonly flagged by AVs because it bundles a Python runtime into a single exe file.
+
+The full source code is open and auditable right here on GitHub (`tracker.py`). If you don't trust the exe, you can run directly from source — see [Running from Source](#running-from-source) below.
+
+To allow it in Norton: **My Norton → Device Security → Scans → History → find the file → More Options → Restore & Exclude.**
+
+---
+
 ## Quick Start (No Install Required)
 
 1. Download the latest release
